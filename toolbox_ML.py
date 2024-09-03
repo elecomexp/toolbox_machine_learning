@@ -10,18 +10,22 @@ def typify_variables():
 
 
 def get_features_num_regression():
+    '''puede tener un test de significancia entre numéricas y numéricas'''
     pass
 
 
 def plot_features_num_regression():
+    '''puede tener un test para la correlación'''
     pass
 
 
 def get_features_cat_regression():
+    '''puede tener dos tests distintos (dependiendo de la cardinalidad se calcularía uno u otro)'''
     pass
 
 
 def plot_features_cat_regression():
+    '''puede usar internamente get_features_cat_regression'''
     pass
 
 

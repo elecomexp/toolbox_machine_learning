@@ -6,7 +6,7 @@ import seaborn as sns
 from scipy.stats import pearsonr
 
 
-def describe_df(df:pd.DataFrame):
+def describe_df(df:pd.DataFrame) -> pd.DataFrame:
     """
     Generates a summary DataFrame that provides detailed information about 
     each column in the input DataFrame. The summary includes data types, 
@@ -84,7 +84,8 @@ def describe_df(df:pd.DataFrame):
     return df_out.round(2).T
 
 
-# NO calcula bien los missings 
+# No tiene control de errores
+# NO calcula bien los missings y los unique values
 def describe_df_JUANMA(df):
     """
     Describe recibe un pandas dataframe para informar de los tipos de datos, los missing los unique values y la cardinalidad.
@@ -303,7 +304,7 @@ def get_features_num_regression(df:pd.DataFrame, target_col, umbral_corr, pvalue
     """
     # Comprobaciones iniciales de los argumentos
     if not isinstance(df, pd.DataFrame):
-        print(f"Error: {df} no es un DataFrame válido.")
+        print(f"Error: No se ha introducido un DataFrame válido.")
         return None
     
     if target_col not in df.columns:

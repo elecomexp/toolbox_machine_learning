@@ -3,10 +3,12 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
-from scipy.stats import pearsonr, chi2_contingency
+from scipy.stats import chi2_contingency, f_oneway, mannwhitneyu, pearsonr
 from sklearn.feature_selection import f_regression
 
-
+# Correcciones respecto de la función de JUANMA
+    # No tenía control de errores
+    # NO calculaba bien los missings y los unique values por la forma en que se llama a la función
 def describe_df(df:pd.DataFrame) -> pd.DataFrame:
     """
     Generates a summary DataFrame that provides detailed information about 
@@ -65,9 +67,8 @@ def describe_df(df:pd.DataFrame) -> pd.DataFrame:
     # Verificar que el argumento es un DataFrame
     if not isinstance(df, pd.DataFrame):
         raise TypeError("Expected a pandas DataFrame")
-        # print("El argumento proporcionado no es un DataFrame.")
-        # return None
     
+    # Diccionario con las estadísticas
     data = {
         'COL_N': df.columns,
         'DATA_TYPE': df.dtypes.values,
@@ -76,61 +77,18 @@ def describe_df(df:pd.DataFrame) -> pd.DataFrame:
         'CARDIN (%)': (df.nunique() / len(df)).values * 100
     }
     
-    # Crear el DataFrame final
+    # Crear el DataFrame final y establecer la columna 'COL_N' como índice
     df_out = pd.DataFrame(data)
-    
-    # Establecer la columna 'COL_N' como índice
     df_out.set_index('COL_N', inplace=True)
     
     return df_out.round(2).T
 
 
-# No tiene control de errores
-# NO calcula bien los missings y los unique values
-def describe_df_JUANMA(df):
-    """
-    Describe recibe un pandas dataframe para informar de los tipos de datos, los missing los unique values y la cardinalidad.
-
-    Argumentos:
-    df (dataframe): Recibe un objeto de tipo Dataframe de pandas.
-
-    Retorna:
-    dataframe: Retorna un dataframe conteniendo como filas los tipos de datos, missing, unique values y cardinalidad
-    y como columnas las del dataframe original.
-    """
-
-    # Obtenemos el nombre de las columnas
-    indices = ['DATA_TYPE','MISSINGS (%)','UNIQUE_VALUES','CARDIN (%)']
-    columns = df.columns.values
-    # Como es más comodo primero generamos la matriz transpuesta y luego transponemos
-    # por eso igualo columns a indices y index a columnas, porque será finalmente así.
-    df_retorno = pd.DataFrame(columns = indices, index = columns)
-    
-    # OBTENEMOS LOS TIPOS
-    tipos = np.array(df.dtypes)
-    # los guardo en la matriz de retorno
-    df_retorno['DATA_TYPE']=tipos
-
-    # OBTENEMOS LOS MISSINGS
-    for col in df:
-        missing = df[col].isnull().sum()+df[col].isna().sum()
-        df_retorno.loc[col,'MISSINGS (%)']=round(100*missing/len(df),2)
-
-    # OBTENEMOS LOS UNIQUE_VALUES Y LA CARDINALIDAD
-    for col in df:
-        unique = len(df[col].unique())
-        df_retorno.loc[col,'UNIQUE_VALUES']=unique
-        df_retorno.loc[col,'CARDIN (%)']=round(100*unique/len(df),2)
-
-    # PONEMOS EL NOMBRE COL_N
-    df_retorno.index.name = "COL_N"
-
-    # DEVOLVEMOS LA MATRIZ
-    return df_retorno.T
-
-
-
-def typify_variables(df:pd.DataFrame, *, umbral_categoria=10, umbral_continua=30) -> pd.DataFrame:
+# Correcciones respecto de la función de JUANMA
+    # No tenía control de errores
+    # No hacía falta el bucle for porque pandas ya aplica el cálculo a todas las columnas
+    # SE podría COMPROBAR SI EL DATA FRAME TIENE COLUMNAS O ESTÁ VACÍO
+def typify_variables(df:pd.DataFrame, umbral_categoria=10, umbral_continua=30) -> pd.DataFrame:
     """
     Suggests the type of each column in the input DataFrame based on cardinality and thresholds.
 
@@ -182,7 +140,6 @@ def typify_variables(df:pd.DataFrame, *, umbral_categoria=10, umbral_continua=30
         raise TypeError("Expected a pandas DataFrame")
     if not isinstance(umbral_categoria, int) or not isinstance(umbral_continua, (int, float)):
         raise TypeError("Thresholds must be an integer and a float, respectively")
-    # SE PUEDE COMPROBAR SI EL DATA FRAME TIENE COLUMNAS O ESTÁ VACÍO
 
     # Calculate cardinality and percentage of unique values
     cardinality = df.nunique()
@@ -211,56 +168,12 @@ def typify_variables(df:pd.DataFrame, *, umbral_categoria=10, umbral_continua=30
     return df_out
 
 
-
-def typify_variables_JUANMA(df, umbral_categoria, umbral_continua):
-    '''
-    Describe recibe un pandas dataframe, un entero con el umbral para asignar un tipo
-    de variable como "Categórica". Recibe tambien un umbral para continua. En caso de superar
-    el umbral_categórica si %cardinalidad > umbral asignara el tipo "Numérica Continua"
-    en caso contrario asignará "Numerica Discreta".
-
-    Argumentos:
-    df (dataframe): Recibe un objeto de tipo Dataframe de pandas.
-    umbral_categoria: Recibe el umbral para asignar como categorica(por debajo). Asigna "Binaria" si la cardinalidad es 2.
-    umbral_continua: Recibe el umbral para distinguir entre discreta(por debajo o igual) y continua(por encima)
-
-    Retorna:
-    dataframe: Retorna un dataframe conteniendo dos columnas: los nombres y el tipo sugerido
-    '''
-
-    # Obtenemos el nombre de las columnas
-    indices = df.columns.values 
-    columnas = ['TIPO_SUGERIDO']
-    # Como es más comodo primero generamos la matriz transpuesta y luego transponemos
-    # por eso igualo columns a indices y index a columnas, porque será finalmente así.
-    df_retorno = pd.DataFrame(index = indices, columns = columnas)
-    
-    # OBTENEMOS LA CARDINALIDAD Y SUGERIMOS EL TIPO DE VARIABLE
-    for col in df:
-        unique = len(df[col].unique())
-        if unique == 2:
-            tipo_sugerido = "BINARIO"
-        elif (unique < umbral_categoria):
-            tipo_sugerido = "CATEGORICA"
-        elif (unique < umbral_continua):
-            tipo_sugerido = "NUMERICA DISCRETA"
-        else:
-            tipo_sugerido = "NUMERICA CONTINUA"
-        df_retorno.loc[col]=tipo_sugerido
-
-    df_retorno.index.name='COL_N'
-    
-    # DEVOLVEMOS LA MATRIZ
-    return df_retorno
-
-
-
-def prueba():
-    print('Sí funciono.')
-
-
-
-def get_features_num_regression(df:pd.DataFrame, target_col, umbral_corr, pvalue=None) -> list:
+# Correcciones respecto de la función de LUIS
+    # Añade un argumento a la función (umbral_card)
+    # Faltaba comprobar cardinalidad
+    # No retornaba None tras las "excepciones"
+    # No hacía falta eliminar lista_num.remove(target_col) si se filtra en el primer if
+def get_features_num_regression(df:pd.DataFrame, target_col, umbral_corr, pvalue=None, umbral_card=10) -> list:
     """
     Obtiene las columnas numéricas de un DataFrame cuya correlación con la columna objetivo 
     supera un umbral especificado. Además, permite filtrar las columnas en función 
@@ -284,6 +197,11 @@ def get_features_num_regression(df:pd.DataFrame, target_col, umbral_corr, pvalue
         filtrar las columnas. Si se proporciona, solo se incluirán 
         las columnas cuya correlación supere el umbral y cuyo 
         valor-p sea mayor o igual a 1 - pvalue. Debe estar comprendido entre 0 y 1.
+        
+    umbral_card : int (opcional)
+        Umbral para definir una alta cardinalidad en una variable numérica.
+        Si la cardinalidad porcentual del target_col es superior o igual a este umbral, entonces se 
+        considera que la columna tiene una alta cardinalidad. En otro caso, tiene una baja cardinalidad.
 
     Retorna:
     --------
@@ -315,17 +233,20 @@ def get_features_num_regression(df:pd.DataFrame, target_col, umbral_corr, pvalue
     if not pd.api.types.is_numeric_dtype(df[target_col]):
         print(f"Error: {target_col} no es una columna numérica.")
         return None
+    
+    if not isinstance(umbral_card, (int, float)):
+        print(f"Error: {umbral_card} no es un valor válido para 'umbral_card'. Debe ser un float.")
+        return None
 
-    # Para la cardinalidad mejor usar un argumento de entrada, en vez de 10 directamente
-    # Verificación adicional para alta cardinalidad en caso de ser discreta
-    if df[target_col].dtype == 'int' and df[target_col].nunique() < 10:
-        print(f"Error: {target_col} es una columna discreta con baja cardinalidad.")
+    cardinality_percentage = (df[target_col].nunique() / len(df)) * 100
+    if cardinality_percentage < umbral_card:
+        print(f"Error: {target_col} es una columna numérica discreta, con baja cardinalidad.")
         return None
 
     if not isinstance(umbral_corr, (int, float)) or umbral_corr < 0 or umbral_corr > 1:
         print(f"Error: {umbral_corr} no es un valor válido para 'umbral_corr'. Debe estar entre 0 y 1.")
         return None
-
+    
     if pvalue is not None and (not isinstance(pvalue, (int, float)) or pvalue < 0 or pvalue > 1):
         print(f"Error: {pvalue} no es un valor válido para 'pvalue'. Debe estar entre 0 y 1.")
         return None
@@ -345,86 +266,102 @@ def get_features_num_regression(df:pd.DataFrame, target_col, umbral_corr, pvalue
     return lista_num
 
 
+def plot_features_num_regression():
+    """puede tener un test para la correlación"""
+    pass
 
-# puede tener un test de significancia entre numéricas y numéricas
-# FALTA COMPROBAR CARDINALIDAD
-# No retorna None tras las excepciones
-# No hace falta lista_num.remove(target_col) si se filtra en el primer if
-def get_features_num_regression_LUIS(df, target_col, umbral_corr, pvalue=None):
+
+# Correcciones respecto de la función de CARLOS:
+    # Añade argumentos de entrada a la función
+    # Faltaba comprobar la cardinalidad
+    # Cuando la columna es binaria no sabes si son (0, 1) o (True y False), así que generalizo el segundo if 
+def get_features_cat_regression(df:pd.DataFrame, target_col:int, pvalue=0.05, umbral_categoria=10, umbral_card=10) -> list:
     """
-    Obtiene columnas numéricas del DataFrame cuya correlación con la columna objetivo 
-    supera un umbral especificado. Además, permite filtrar las columnas en función 
-    de la significancia estadística de la correlación mediante un valor p.
+    La función devuelve una lista con las columnas categóricas del dataframe cuyo test de relación 
+    con la columna designada por 'target_col' supera el umbral de confianza estadística definido por 'pvalue'.
+    
+    La función realiza una Prueba U de Mann-Whitney si la variable categórica es binaria,
+    o una prueba ANOVA (análisis de varianza) si la variable categórica tiene más de dos niveles.
 
-    Parámetros:
+    La función también realiza varias comprobaciones previas para asegurar que los argumentos de entrada son adecuados. 
+    Si alguna condición no se cumple, la función retorna 'None' y muestra un mensaje explicativo.
 
-    df (pd.DataFrame): DataFrame que contiene los datos a analizar.
+    Parámetros
+    ----------
+    df : pd.DataFrame
+        Dataframe que contiene los datos a analizar.
 
-    target_col (str): Nombre de la columna objetivo que se desea predecir; debe ser 
-                      una variable numérica continua o discreta con alta cardinalidad.
+    target_col : str
+        Nombre de la columna objetivo que se desea predecir; debe ser una variable numérica continua 
+        o discreta con alta cardinalidad.
 
-    umbral_corr (float): Umbral de correlación absoluto para considerar una relación 
-                         significativa entre las columnas (debe estar entre 0 y 1).
+    pvalue : float (opcional)
+        Umbral de significancia estadística para los tests de relación. Su valor por defecto es 0.05.
 
-    pvalue (float, opcional): Valor p que determina el nivel de significancia para 
-                              filtrar las columnas. Si se proporciona, solo se incluirán 
-                              las columnas cuya correlación supere el umbral y cuyo 
-                              valor p sea mayor o igual a 1 - pvalue. Debe estar entre 0 y 1.
+    umbral_categoria : int (opcional)
+        Umbral para considerar una variable como categórica en función de su cardinalidad.
+        Su valor por defecto es 10.
+
+    umbral_card : int (opcional)
+        Porcentaje mínimo de valores únicos en relación al tamaño del dataframe por encima del cual 
+        una variable numérica se considera de alta cardinalidad. Su valor por defecto es 10.
 
     Retorna:
-
-    lista_num: Lista de nombres de columnas numéricas que cumplen con los criterios establecidos.
-               Si no hay columnas que cumplan los requisitos, se devuelve una lista vacía.
-
-    Excepciones:
-
-    Imprime mensajes de error si alguno de los argumentos no es válido o si hay problemas
-    con los tipos de datos.
+    lista_categoricas : list
+        Lista de nombres de columnas categóricas que cumplen con los criterios establecidos.
+        Si no hay columnas que cumplan los requisitos, se devuelve una lista vacía.
+        Si las condiciones de entrada no se cumplen, se devuelve None.
     """
 
+    # Comprobaciones
     if not isinstance(df, pd.DataFrame):
-        print(f"{df} no es un argumento válido. Chequea que sea un DataFrame.")
-
+        print("Error: Se esperaba un pandas DataFrame como primer argumento.")
+        return None
     
     if target_col not in df.columns:
-        print(f"{target_col} no es una columna del DataFrame.")
+        print("Error: La columna objetivo no existe en el DataFrame.")
+        return None
 
-    if umbral_corr > 1 or umbral_corr < 0 or not isinstance(umbral_corr, (int,float)):
-        print(f"{umbral_corr} no es un valor válido para 'umbral_corr', debe de estar comprendido entre 0 y 1.")
+    if not pd.api.types.is_numeric_dtype(df[target_col]):
+        print("Error: La columna objetivo debe ser de tipo numérico.")
+        return None
 
-    if pvalue != None and  (pvalue > 1 or pvalue < 0 or not isinstance(umbral_corr, (int,float))):
-        print(f"{pvalue} no es un valor válido para 'pvalue', debe deestar comprendido entre 0 y 1.")
+    if not (0 < pvalue <= 1):
+        print("Error: El valor de pvalue debe estar entre 0 y 1.")
+        return None
 
+    # Comprobar si el target tiene alta cardinalidad
+    cardinalidad_percent = (df[target_col].nunique() / df.shape[0]) * 100
+    if cardinalidad_percent < umbral_card:
+        print(f"Error: La columna objetivo no cumple con el umbral de alta cardinalidad ({umbral_card}%).")
+        return None
 
-    lista_num = []
-    for columna in df.columns:
-        if pd.api.types.is_numeric_dtype(df[columna]):
-            resultado_test = pearsonr(df[columna], df[target_col], alternative= "less")
-            if pvalue == None:
-                if abs(resultado_test[0]) > umbral_corr:
-                    lista_num.append(columna)
+    # Lista de columnas categóricas que cumplen los criterios
+    lista_categoricas = []
+
+    # Recorrer las columnas del DataFrame
+    for col in df.columns:
+        # Comprobar si la columna es categórica en función del umbral de cardinalidad
+        if pd.api.types.is_categorical_dtype(df[col]) or df[col].nunique() <= umbral_categoria:
+            
+            # Si la columna es binaria, realizar Prueba-U de Mann-Whitney
+            if df[col].nunique() == 2:
+                a = df.loc[df[col] == df[col].unique()[0], target_col]
+                b = df.loc[df[col] == df[col].unique()[1], target_col]
+                u_stat, p_val = mannwhitneyu(a, b)
+                
+                if p_val <= pvalue:
+                    lista_categoricas.append(col)
+
+            # Si tiene más de dos categorías, realizar ANOVA
             else:
-                if abs(resultado_test[0]) > umbral_corr:
-                   if resultado_test[1] >= 1-pvalue:
-                       lista_num.append(columna)
-                    
-    lista_num.remove(target_col)
+                grupos = [df[df[col] == nivel][target_col] for nivel in df[col].unique()]
+                f_val, p_val = f_oneway(*grupos)
+                
+                if p_val <= pvalue:
+                    lista_categoricas.append(col)
     
-    return lista_num
-
-
-
-def plot_features_num_regression():
-    '''puede tener un test para la correlación'''
-    pass
-
-
-def get_features_cat_regression():
-    '''
-    Puede tener dos tests distintos (dependiendo de la cardinalidad se calcularía uno u otro)
-    Chi 2 se usa para categórica-categórica
-    '''
-    pass
+    return lista_categoricas
 
 
 def plot_features_cat_regression():
@@ -432,9 +369,20 @@ def plot_features_cat_regression():
     pass
 
 
-# ######################
-# OTHER USEFUL FUNCTIONS
-# ######################
+##########################################################################################
+#      PRIVATE FUNCTIONS            PRIVATE FUNCTIONS            PRIVATE FUNCTIONS       #
+##########################################################################################
+
+def _is_dataframe(df):
+    if not isinstance(df, pd.DataFrame):
+        print("Error: Expected a pandas DataFrame")
+        return None
+    
+
+
+##########################################################################################
+#   OTHER USEFUL FUNCTIONS        OTHER USEFUL FUNCTIONS        OTHER USEFUL FUNCTIONS   #
+##########################################################################################
 
 def get_cardinality(df:pd.DataFrame, threshold_categorical=10, threshold_continuous=30) -> pd.DataFrame:
     '''

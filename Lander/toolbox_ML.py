@@ -127,6 +127,7 @@ def describe_df_JUANMA(df):
     return df_retorno.T
 
 
+
 def typify_variables(df:pd.DataFrame, *, umbral_categoria=10, umbral_continua=30) -> pd.DataFrame:
     """
     Suggests the type of each column in the input DataFrame based on cardinality and thresholds.
@@ -208,6 +209,7 @@ def typify_variables(df:pd.DataFrame, *, umbral_categoria=10, umbral_continua=30
     return df_out
 
 
+
 def typify_variables_JUANMA(df, umbral_categoria, umbral_continua):
     '''
     Describe recibe un pandas dataframe, un entero con el umbral para asignar un tipo
@@ -250,11 +252,17 @@ def typify_variables_JUANMA(df, umbral_categoria, umbral_continua):
     return df_retorno
 
 
-def prueba(df:pd.DataFrame, target_col, umbral_corr, pvalue=None):
+
+def prueba():
+    print('Sí funciono.')
+
+
+
+def get_features_num_regression(df:pd.DataFrame, target_col, umbral_corr, pvalue=None) -> list:
     """
     Obtiene las columnas numéricas de un DataFrame cuya correlación con la columna objetivo 
     supera un umbral especificado. Además, permite filtrar las columnas en función 
-    de la significancia estadística de la correlación, mediante un valor p opcional.
+    de la significancia estadística de la correlación, mediante un valor-p opcional.
 
     Parámetros:
     -----------
@@ -270,10 +278,10 @@ def prueba(df:pd.DataFrame, target_col, umbral_corr, pvalue=None):
         significativa entre las columnas (debe estar comprendido entre 0 y 1).
 
     pvalue : float (opcional)
-        Valor p que determina el nivel de significancia para 
+        Valor-p que determina el nivel de significancia para 
         filtrar las columnas. Si se proporciona, solo se incluirán 
         las columnas cuya correlación supere el umbral y cuyo 
-        valor p sea mayor o igual a 1 - pvalue. Debe estar comprendido entre 0 y 1.
+        valor-p sea mayor o igual a 1 - pvalue. Debe estar comprendido entre 0 y 1.
 
     Retorna:
     --------
@@ -293,7 +301,6 @@ def prueba(df:pd.DataFrame, target_col, umbral_corr, pvalue=None):
 
     En cualquiera de estos casos, la función retorna `None`.
     """
-
     # Comprobaciones iniciales de los argumentos
     if not isinstance(df, pd.DataFrame):
         print(f"Error: {df} no es un DataFrame válido.")
@@ -324,7 +331,7 @@ def prueba(df:pd.DataFrame, target_col, umbral_corr, pvalue=None):
     
     for columna in df.columns:
         if pd.api.types.is_numeric_dtype(df[columna]) and columna != target_col:
-            resultado_test = pearsonr(df[columna], df[target_col])
+            resultado_test = pearsonr(df[columna], df[target_col], alternative='less')
             correlacion = resultado_test[0]
             p_valor = resultado_test[1]
             
@@ -335,7 +342,10 @@ def prueba(df:pd.DataFrame, target_col, umbral_corr, pvalue=None):
     return lista_num
 
 
+
 # puede tener un test de significancia entre numéricas y numéricas
+# FALTA COMPROBAR CARDINALIDAD
+# No hace falta lista_num.remove(target_col) si se filtra en el primer if
 def get_features_num_regression_LUIS(df, target_col, umbral_corr, pvalue=None):
     """
     Obtiene columnas numéricas del DataFrame cuya correlación con la columna objetivo 
@@ -367,7 +377,6 @@ def get_features_num_regression_LUIS(df, target_col, umbral_corr, pvalue=None):
     Imprime mensajes de error si alguno de los argumentos no es válido o si hay problemas
     con los tipos de datos.
     """
-
 
     if not isinstance(df, pd.DataFrame):
         print(f"{df} no es un argumento válido. Chequea que sea un DataFrame.")

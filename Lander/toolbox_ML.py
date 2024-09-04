@@ -346,6 +346,7 @@ def get_features_num_regression(df:pd.DataFrame, target_col, umbral_corr, pvalue
 
 # puede tener un test de significancia entre numéricas y numéricas
 # FALTA COMPROBAR CARDINALIDAD
+# No retorna None tras las excepciones
 # No hace falta lista_num.remove(target_col) si se filtra en el primer if
 def get_features_num_regression_LUIS(df, target_col, umbral_corr, pvalue=None):
     """

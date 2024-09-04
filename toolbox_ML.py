@@ -12,7 +12,7 @@ def typify_variables(df:pd.DataFrame, umbral_categoria, umbral_continua):
     pass
 
 
-def get_features_num_regression_LUIS(df, target_col, umbral_corr, pvalue=None):
+def get_features_num_regression(df, target_col, umbral_corr, pvalue=None):
     '''puede tener un test de significancia entre numéricas y numéricas'''
     pass
 

@@ -3,6 +3,8 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
+from scipy.stats import pearsonr
+
 
 def describe_df(df:pd.DataFrame):
     """
@@ -177,11 +179,11 @@ def typify_variables(df:pd.DataFrame, *, umbral_categoria=10, umbral_continua=30
         raise TypeError("Expected a pandas DataFrame")
     if not isinstance(umbral_categoria, int) or not isinstance(umbral_continua, (int, float)):
         raise TypeError("Thresholds must be an integer and a float, respectively")
+    # SE PUEDE COMPROBAR SI EL DATA FRAME TIENE COLUMNAS O ESTÁ VACÍO
 
     # Calculate cardinality and percentage of unique values
     cardinality = df.nunique()
-    total_rows = len(df)
-    cardinality_percentage = (cardinality / total_rows) * 100
+    cardinality_percentage = (cardinality / len(df)) * 100
 
     # Determine the suggested type for each column
     tipo_sugerido = []
@@ -193,9 +195,9 @@ def typify_variables(df:pd.DataFrame, *, umbral_categoria=10, umbral_continua=30
             tipo_sugerido.append("Categórica")
         else:
             if cardinality_percentage[col] >= umbral_continua:
-                tipo_sugerido.append("Numerica Continua")
+                tipo_sugerido.append("Numérica Continua")
             else:
-                tipo_sugerido.append("Numerica Discreta")
+                tipo_sugerido.append("Numérica Discreta")
 
     # Create the output DataFrame
     df_out = pd.DataFrame({
@@ -206,7 +208,7 @@ def typify_variables(df:pd.DataFrame, *, umbral_categoria=10, umbral_continua=30
     return df_out
 
 
-def typify_variables_JUANMA(df,umbral_categoria,umbral_continua):
+def typify_variables_JUANMA(df, umbral_categoria, umbral_continua):
     '''
     Describe recibe un pandas dataframe, un entero con el umbral para asignar un tipo
     de variable como "Categórica". Recibe tambien un umbral para continua. En caso de superar
@@ -246,6 +248,92 @@ def typify_variables_JUANMA(df,umbral_categoria,umbral_continua):
     
     # DEVOLVEMOS LA MATRIZ
     return df_retorno
+
+
+def prueba(df:pd.DataFrame, target_col, umbral_corr, pvalue=None):
+    """
+    Obtiene las columnas numéricas de un DataFrame cuya correlación con la columna objetivo 
+    supera un umbral especificado. Además, permite filtrar las columnas en función 
+    de la significancia estadística de la correlación, mediante un valor p opcional.
+
+    Parámetros:
+    -----------
+    df : pd.DataFrame
+        DataFrame que contiene los datos a analizar.
+
+    target_col : str
+        Nombre de la columna objetivo que se desea predecir; debe ser 
+        una variable numérica continua o discreta con alta cardinalidad.
+
+    umbral_corr : float
+        Umbral de correlación absoluta para considerar una relación 
+        significativa entre las columnas (debe estar comprendido entre 0 y 1).
+
+    pvalue : float (opcional)
+        Valor p que determina el nivel de significancia para 
+        filtrar las columnas. Si se proporciona, solo se incluirán 
+        las columnas cuya correlación supere el umbral y cuyo 
+        valor p sea mayor o igual a 1 - pvalue. Debe estar comprendido entre 0 y 1.
+
+    Retorna:
+    --------
+    lista_num : list
+        Lista de nombres de columnas numéricas que cumplen con los criterios establecidos.
+        Si no hay columnas que cumplan los requisitos, se devuelve una lista vacía.
+        Si algún argumento no es válido, se devuelve None.
+
+    Excepciones:
+    -----------
+    La función imprime mensajes de error en los siguientes casos:
+    - Si `df` no es un DataFrame.
+    - Si `target_col` no es una columna del DataFrame.
+    - Si `target_col` no es una variable numérica continua o es discreta con baja cardinalidad.
+    - Si `umbral_corr` no es un número entre 0 y 1.
+    - Si `pvalue` no es None y no es un número entre 0 y 1.
+
+    En cualquiera de estos casos, la función retorna `None`.
+    """
+
+    # Comprobaciones iniciales de los argumentos
+    if not isinstance(df, pd.DataFrame):
+        print(f"Error: {df} no es un DataFrame válido.")
+        return None
+    
+    if target_col not in df.columns:
+        print(f"Error: {target_col} no es una columna del DataFrame.")
+        return None
+    
+    if not pd.api.types.is_numeric_dtype(df[target_col]):
+        print(f"Error: {target_col} no es una columna numérica.")
+        return None
+
+    # Verificación adicional para alta cardinalidad en caso de ser discreta
+    if df[target_col].dtype == 'int' and df[target_col].nunique() < 10:
+        print(f"Error: {target_col} es una columna discreta con baja cardinalidad.")
+        return None
+
+    if not isinstance(umbral_corr, (int, float)) or umbral_corr < 0 or umbral_corr > 1:
+        print(f"Error: {umbral_corr} no es un valor válido para 'umbral_corr'. Debe estar entre 0 y 1.")
+        return None
+
+    if pvalue is not None and (not isinstance(pvalue, (int, float)) or pvalue < 0 or pvalue > 1):
+        print(f"Error: {pvalue} no es un valor válido para 'pvalue'. Debe estar entre 0 y 1.")
+        return None
+
+    lista_num = []
+    
+    for columna in df.columns:
+        if pd.api.types.is_numeric_dtype(df[columna]) and columna != target_col:
+            resultado_test = pearsonr(df[columna], df[target_col])
+            correlacion = resultado_test[0]
+            p_valor = resultado_test[1]
+            
+            if abs(correlacion) > umbral_corr:
+                if pvalue is None or p_valor >= 1 - pvalue:
+                    lista_num.append(columna)
+    
+    return lista_num
+
 
 # puede tener un test de significancia entre numéricas y numéricas
 def get_features_num_regression_LUIS(df, target_col, umbral_corr, pvalue=None):

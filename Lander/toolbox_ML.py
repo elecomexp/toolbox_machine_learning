@@ -173,7 +173,7 @@ def typify_variables(df:pd.DataFrame, umbral_categoria=10, umbral_continua=30) -
     # Faltaba comprobar cardinalidad
     # No retornaba None tras las "excepciones"
     # No hacía falta eliminar lista_num.remove(target_col) si se filtra en el primer if
-def get_features_num_regression(df:pd.DataFrame, target_col, umbral_corr, pvalue=None, umbral_card=10) -> list:
+def get_features_num_regression(df:pd.DataFrame, target_col:str, umbral_corr, pvalue=None, umbral_card=10) -> list:
     """
     Obtiene las columnas numéricas de un DataFrame cuya correlación con la columna objetivo 
     supera un umbral especificado. Además, permite filtrar las columnas en función 
@@ -275,7 +275,7 @@ def plot_features_num_regression():
     # Añade argumentos de entrada a la función
     # Faltaba comprobar la cardinalidad
     # Cuando la columna es binaria no sabes si son (0, 1) o (True y False), así que generalizo el segundo if 
-def get_features_cat_regression(df:pd.DataFrame, target_col:int, pvalue=0.05, umbral_categoria=10, umbral_card=10) -> list:
+def get_features_cat_regression(df:pd.DataFrame, target_col:str, pvalue=0.05, umbral_categoria=10, umbral_card=10) -> list:
     """
     La función devuelve una lista con las columnas categóricas del dataframe cuyo test de relación 
     con la columna designada por 'target_col' supera el umbral de confianza estadística definido por 'pvalue'.

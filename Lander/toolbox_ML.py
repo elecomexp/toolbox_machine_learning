@@ -3,7 +3,8 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
-from scipy.stats import pearsonr
+from scipy.stats import pearsonr, chi2_contingency
+from sklearn.feature_selection import f_regression
 
 
 def describe_df(df:pd.DataFrame) -> pd.DataFrame:
@@ -315,6 +316,7 @@ def get_features_num_regression(df:pd.DataFrame, target_col, umbral_corr, pvalue
         print(f"Error: {target_col} no es una columna numérica.")
         return None
 
+    # Para la cardinalidad mejor usar un argumento de entrada, en vez de 10 directamente
     # Verificación adicional para alta cardinalidad en caso de ser discreta
     if df[target_col].dtype == 'int' and df[target_col].nunique() < 10:
         print(f"Error: {target_col} es una columna discreta con baja cardinalidad.")
@@ -402,7 +404,7 @@ def get_features_num_regression_LUIS(df, target_col, umbral_corr, pvalue=None):
                 if abs(resultado_test[0]) > umbral_corr:
                     lista_num.append(columna)
             else:
-               if abs(resultado_test[0]) > umbral_corr:
+                if abs(resultado_test[0]) > umbral_corr:
                    if resultado_test[1] >= 1-pvalue:
                        lista_num.append(columna)
                     
@@ -418,7 +420,10 @@ def plot_features_num_regression():
 
 
 def get_features_cat_regression():
-    '''puede tener dos tests distintos (dependiendo de la cardinalidad se calcularía uno u otro)'''
+    '''
+    Puede tener dos tests distintos (dependiendo de la cardinalidad se calcularía uno u otro)
+    Chi 2 se usa para categórica-categórica
+    '''
     pass
 
 

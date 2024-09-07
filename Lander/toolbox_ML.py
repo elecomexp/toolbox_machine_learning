@@ -1,3 +1,5 @@
+import warnings
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -88,7 +90,7 @@ def describe_df(df:pd.DataFrame) -> pd.DataFrame:
     # No tenía control de errores
     # No hacía falta el bucle for porque pandas ya aplica el cálculo a todas las columnas
     # SE podría COMPROBAR SI EL DATA FRAME TIENE COLUMNAS O ESTÁ VACÍO
-def typify_variables(df:pd.DataFrame, umbral_categoria=10, umbral_continua=30) -> pd.DataFrame:
+def typify_variables(df:pd.DataFrame, umbral_categoria=10, umbral_continua=30.0) -> pd.DataFrame:
     """
     Suggests the type of each column in the input DataFrame based on cardinality and thresholds.
 
@@ -173,7 +175,8 @@ def typify_variables(df:pd.DataFrame, umbral_categoria=10, umbral_continua=30) -
     # Faltaba comprobar cardinalidad
     # No retornaba None tras las "excepciones"
     # No hacía falta eliminar lista_num.remove(target_col) si se filtra en el primer if
-def get_features_num_regression(df:pd.DataFrame, target_col:str, umbral_corr, pvalue=None, umbral_card=10) -> list:
+    # Para que supere el test de pearson con una significancia de 1-p_value, p_value debe ser menor que el argumento que introduzcamos
+def get_features_num_regression(df:pd.DataFrame, target_col:str, umbral_corr:float, pvalue:float=None, umbral_card=10.0) -> list:
     """
     Obtiene las columnas numéricas de un DataFrame cuya correlación con la columna objetivo 
     supera un umbral especificado. Además, permite filtrar las columnas en función 
@@ -196,9 +199,11 @@ def get_features_num_regression(df:pd.DataFrame, target_col:str, umbral_corr, pv
         Valor-p que determina el nivel de significancia para 
         filtrar las columnas. Si se proporciona, solo se incluirán 
         las columnas cuya correlación supere el umbral y cuyo 
-        valor-p sea mayor o igual a 1 - pvalue. Debe estar comprendido entre 0 y 1.
+        valor-p sea menor que `pvalue`, es decir, las que tengan una 
+        significancia estadística mayor o igual a 1-p_value.
+        Debe estar comprendido entre 0 y 1.
         
-    umbral_card : int (opcional)
+    umbral_card : float (opcional)
         Umbral para definir una alta cardinalidad en una variable numérica.
         Si la cardinalidad porcentual del target_col es superior o igual a este umbral, entonces se 
         considera que la columna tiene una alta cardinalidad. En otro caso, tiene una baja cardinalidad.
@@ -255,20 +260,103 @@ def get_features_num_regression(df:pd.DataFrame, target_col:str, umbral_corr, pv
     
     for columna in df.columns:
         if pd.api.types.is_numeric_dtype(df[columna]) and columna != target_col:
-            resultado_test = pearsonr(df[columna], df[target_col], alternative='less')
+            resultado_test = pearsonr(df[columna], df[target_col])
             correlacion = resultado_test[0]
             p_valor = resultado_test[1]
             
             if abs(correlacion) > umbral_corr:
-                if pvalue is None or p_valor >= 1 - pvalue:
+                if pvalue is None or p_valor < pvalue:
                     lista_num.append(columna)
     
     return lista_num
 
 
-def plot_features_num_regression():
-    """puede tener un test para la correlación"""
-    pass
+# Correcciones respecto de la función de LUIS
+    # Añado valores por defecto en los argumentos (según indicaciones del enunciado)
+    # Gestión de errores heredados desde get_features_num_regression
+    # En vez de tener 4 veces el código de pintar, redefino las variables según el caso de uso y después voy al bucle de dibujar
+    # La función devuelve las columnas numéricas (según indicaciones del enunciado)
+def plot_features_num_regression(df:pd.DataFrame, target_col='', columns=[], umbral_corr=0.0, pvalue=None, umbral_card=10.0) -> list:
+    """
+    Visualiza las relaciones entre una columna objetivo y las columnas numéricas del DataFrame que cumplen con los criterios 
+    de correlación y significancia especificados. Utiliza pairplots de Seaborn para mostrar las relaciones entre las 
+    columnas seleccionadas.
+
+    Parámetros:
+    -----------
+    df : pd.DataFrame
+        DataFrame que contiene los datos a analizar.
+
+    target_col : str, opcional
+        Nombre de la columna objetivo que se desea predecir; debe ser una variable numérica continua o discreta 
+        con alta cardinalidad.
+
+    columns : list, opcional
+        Lista de nombres de columnas numéricas a considerar para la visualización. Si se proporciona, solo se 
+        visualizarán las columnas en esta lista que también cumplen con los criterios establecidos. Si se omite, 
+        se utilizarán todas las columnas numéricas que cumplen con los criterios.
+
+    umbral_corr : float, opcional
+        Umbral de correlación absoluta para considerar una relación significativa entre las columnas (debe estar 
+        comprendido entre 0 y 1). Solo se visualizarán las columnas cuya correlación con `target_col` sea mayor 
+        que este umbral.
+
+    pvalue : float, opcional
+        Valor-p que determina el nivel de significancia para filtrar las columnas. Si se proporciona, solo se 
+        incluirán las columnas cuya correlación supere el umbral y cuyo valor-p sea menor que `pvalue`, es decir, 
+        las que tengan una significancia estadística mayor o igual a 1 - pvalue. Debe estar comprendido entre 0 y 1.
+
+    umbral_card : float, opcional
+        Umbral para definir una alta cardinalidad en una variable numérica. Si la cardinalidad porcentual del 
+        `target_col` es superior o igual a este umbral, entonces se considera que la columna tiene una alta 
+        cardinalidad. En otro caso, tiene una baja cardinalidad.
+
+    Retorna:
+    --------
+    list
+        Lista de nombres de columnas numéricas que cumplen con los criterios establecidos y que se han utilizado 
+        para crear los pairplots. Si no hay columnas que cumplan los requisitos, se devuelve una lista vacía.
+
+    Excepciones:
+    -----------
+    La función imprime mensajes de error en los siguientes casos:
+    - Si `target_col` no está en el DataFrame.
+    - Si ninguna columna cumple con los criterios de correlación y significancia.
+    - Si ocurre algún problema al generar los pairplots.
+
+    Ejemplo:
+    --------
+    >>> plot_features_num_regression(df, 'median_house_value', umbral_corr=0.1, pvalue=0.05, umbral_card=12.5)
+    """
+
+    # Obtener lista de features relevantes a través de get_features_num_regression 
+    lista = get_features_num_regression(df, target_col, umbral_corr, pvalue, umbral_card)
+    
+    # Gestión errores heredados de get_features_num_regression()
+    if lista is None:
+        return None
+    elif not lista:
+        print('Ninguna columna cumple con los criterios de correlación y significancia.')
+        return None
+    
+    # Si no se han especificado columnas, usar las obtenidas de get_features_num_regression
+    if columns:
+        numeric_columns = [col for col in columns if col in lista]
+    if not columns:
+        numeric_columns = lista
+        
+    # Dividir en grupos de 5 para los pairplots (1 columna objetivo + 4 columnas adicionales)
+    for i in range(0, len(numeric_columns), 4):
+        subset_cols = numeric_columns[i:i + 4]
+        # Asegurarse que target_col siempre esté en cada subset
+        if target_col not in subset_cols:
+            subset_cols.insert(0, target_col)  
+        sns.pairplot(df[subset_cols])
+        plt.show()
+
+    return numeric_columns
+
+
 
 
 # Correcciones respecto de la función de CARLOS:

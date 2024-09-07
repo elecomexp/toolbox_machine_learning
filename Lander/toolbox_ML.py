@@ -198,7 +198,7 @@ def get_features_num_regression(df:pd.DataFrame, target_col:str, umbral_corr:flo
     pvalue : float (opcional)
         Valor-p que determina el nivel de significancia para 
         filtrar las columnas. Si se proporciona, solo se incluirán 
-        las columnas cuya correlación supere el umbral y cuyo 
+        las columnas cuya correlación supere el umbral `umbral_corr` y cuyo 
         valor-p sea menor que `pvalue`, es decir, las que tengan una 
         significancia estadística mayor o igual a 1-p_value.
         Debe estar comprendido entre 0 y 1.

@@ -357,8 +357,6 @@ def plot_features_num_regression(df:pd.DataFrame, target_col='', columns=[], umb
     return numeric_columns
 
 
-
-
 # Correcciones respecto de la función de CARLOS:
     # Añade argumentos de entrada a la función
     # Faltaba comprobar la cardinalidad

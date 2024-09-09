@@ -138,8 +138,10 @@ def typify_variables(df:pd.DataFrame, umbral_categoria=10, umbral_continua=30.0)
     1                B       Categórica
     2                C  Numerica Continua
     """
+    # Gestión de errores
     if not isinstance(df, pd.DataFrame):
         raise TypeError("Expected a pandas DataFrame")
+    
     if not isinstance(umbral_categoria, int) or not isinstance(umbral_continua, (int, float)):
         raise TypeError("Thresholds must be an integer and a float, respectively")
 
@@ -176,7 +178,8 @@ def typify_variables(df:pd.DataFrame, umbral_categoria=10, umbral_continua=30.0)
     # No retornaba None tras las "excepciones"
     # No hacía falta eliminar lista_num.remove(target_col) si se filtra en el primer if
     # Para que supere el test de pearson con una significancia de 1-p_value, p_value debe ser menor que el argumento que introduzcamos
-def get_features_num_regression(df:pd.DataFrame, target_col:str, umbral_corr:float, pvalue:float=None, umbral_card=10.0) -> list:
+    # Añadido el argumento pearson_results para mostrar el resultado del análisis
+def get_features_num_regression(df:pd.DataFrame, target_col:str, umbral_corr:float, pvalue:float=None, umbral_card=10.0, pearson_results=False) -> list:
     """
     Obtiene las columnas numéricas de un DataFrame cuya correlación con la columna objetivo 
     supera un umbral especificado. Además, permite filtrar las columnas en función 
@@ -207,6 +210,11 @@ def get_features_num_regression(df:pd.DataFrame, target_col:str, umbral_corr:flo
         Umbral para definir una alta cardinalidad en una variable numérica.
         Si la cardinalidad porcentual del target_col es superior o igual a este umbral, entonces se 
         considera que la columna tiene una alta cardinalidad. En otro caso, tiene una baja cardinalidad.
+        
+    pearson_results : bool (opcional)
+        Si es `True`, imprime los resultados del test de Pearson para cada columna que
+        cumpla los criterios de correlación y significancia. Los resultados incluyen el
+        nombre de la columna, el valor de correlación y el p-valor correspondiente.
 
     Retorna:
     --------
@@ -227,8 +235,7 @@ def get_features_num_regression(df:pd.DataFrame, target_col:str, umbral_corr:flo
     En cualquiera de estos casos, la función retorna `None`.
     """
     # Comprobaciones iniciales de los argumentos
-    if not isinstance(df, pd.DataFrame):
-        print(f"Error: No se ha introducido un DataFrame válido.")
+    if not _is_dataframe(df):
         return None
     
     if target_col not in df.columns:
@@ -265,8 +272,12 @@ def get_features_num_regression(df:pd.DataFrame, target_col:str, umbral_corr:flo
             p_valor = resultado_test[1]
             
             if abs(correlacion) > umbral_corr:
-                if pvalue is None or p_valor < pvalue:
+                # Confianza del 1-p_valor
+                if pvalue is None or p_valor < pvalue:  
                     lista_num.append(columna)
+                    if pearson_results:
+                        print(f'columna={columna}, correlation={correlacion}, p_valor={p_valor}')
+                    
     
     return lista_num
 
@@ -335,8 +346,8 @@ def plot_features_num_regression(df:pd.DataFrame, target_col='', columns=[], umb
     # Gestión errores heredados de get_features_num_regression()
     if lista is None:
         return None
-    elif not lista:
-        print('Ninguna columna cumple con los criterios de correlación y significancia.')
+    elif not lista: # [] != None != [columnas]
+        print('Error: Ninguna columna cumple con los criterios de correlación y significancia.')
         return None
     
     # Si no se han especificado columnas, usar las obtenidas de get_features_num_regression
@@ -400,8 +411,7 @@ def get_features_cat_regression(df:pd.DataFrame, target_col:str, pvalue=0.05, um
     """
 
     # Comprobaciones
-    if not isinstance(df, pd.DataFrame):
-        print("Error: Se esperaba un pandas DataFrame como primer argumento.")
+    if not _is_dataframe(df):
         return None
     
     if target_col not in df.columns:
@@ -459,10 +469,36 @@ def plot_features_cat_regression():
 #      PRIVATE FUNCTIONS            PRIVATE FUNCTIONS            PRIVATE FUNCTIONS       #
 ##########################################################################################
 
-def _is_dataframe(df):
+
+def _is_dataframe(df) -> bool:
+    """
+    Verifica si el objeto proporcionado es un DataFrame de pandas.
+
+    Parámetros:
+    -----------
+    df : cualquier tipo
+        Objeto que se desea verificar si es un DataFrame de pandas.
+
+    Retorna:
+    --------
+    bool:
+        Retorna `True` si el objeto es un DataFrame de pandas, de lo contrario, 
+        imprime un mensaje de error y retorna `False`.
+
+    Ejemplo:
+    --------
+    >>> _is_dataframe(pd.DataFrame())
+    True
+    
+    >>> _is_dataframe([1, 2, 3])
+    Error: Expected a pandas DataFrame
+    False
+    """
     if not isinstance(df, pd.DataFrame):
         print("Error: Expected a pandas DataFrame")
-        return None
+        return False
+    else:
+        return True
     
 
 

@@ -255,9 +255,9 @@ def get_features_num_regression(df:pd.DataFrame, target_col:str, umbral_corr:flo
         print(f"Error: {umbral_card} no es un valor válido para 'umbral_card'. Debe ser un float.")
         return None
 
-    cardinality_percentage = (df[target_col].nunique() / len(df)) * 100
+    cardinality_percentage = (df[target_col].nunique() / len(df)) * 100 # Cardinalidad de la columna "target"
     if cardinality_percentage < umbral_card:
-        print(f"Error: {target_col} es una columna numérica discreta, con baja cardinalidad.")
+        print(f"Error: {target_col} tiene una cardinalidad inferior a {umbral_card}.")
         return None
 
     if not isinstance(umbral_corr, (int, float)) or umbral_corr < 0 or umbral_corr > 1:
@@ -358,15 +358,12 @@ def plot_features_num_regression(df:pd.DataFrame, target_col='', columns=[], umb
         return None
     
     # Si no se han especificado columnas, usar las obtenidas de get_features_num_regression
-    if columns:
-        numeric_columns = [col for col in columns if col in lista]
-
-    elif not columns:
-        numeric_columns = lista
 
     if not columns:
-        print("Error: Ninguna columna de 'columns' cumple con el criterio de significancia.")
-        return None
+        numeric_columns = lista
+    else:
+        # Filtrar las que cumplen con la significancia estadística
+        numeric_columns = [col for col in columns if col in lista]
 
         
     # Dividir en grupos de 5 para los pairplots (1 columna objetivo + 4 columnas adicionales)
@@ -440,10 +437,10 @@ def get_features_cat_regression(df:pd.DataFrame, target_col:str, pvalue=0.05, um
         return None
 
     # Comprobar si el target tiene alta cardinalidad
-    cardinalidad_percent = (df[target_col].nunique() / df.shape[0]) * 100
-    if cardinalidad_percent < umbral_card:
-        print(f"Error: La columna objetivo no cumple con el umbral de alta cardinalidad ({umbral_card}%).")
-        return None
+    #cardinalidad_percent = (df[target_col].nunique() / df.shape[0]) * 100
+    #if cardinalidad_percent < umbral_card:
+        #print(f"Error: La columna objetivo no cumple con el umbral de alta cardinalidad ({umbral_card}%).")
+        #return None
 
     # Lista de columnas categóricas que cumplen los criterios
     lista_categoricas = []

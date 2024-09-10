@@ -1,3 +1,4 @@
+import math
 import warnings
 
 import matplotlib.pyplot as plt
@@ -346,7 +347,7 @@ def plot_features_num_regression(df:pd.DataFrame, target_col='', columns=[], umb
     # Gestión errores heredados de get_features_num_regression()
     if lista is None:
         return None
-    elif not lista: # [] != None != [columnas]
+    elif not lista:
         print('Error: Ninguna columna cumple con los criterios de correlación y significancia.')
         return None
     
@@ -372,7 +373,7 @@ def plot_features_num_regression(df:pd.DataFrame, target_col='', columns=[], umb
     # Añade argumentos de entrada a la función
     # Faltaba comprobar la cardinalidad
     # Cuando la columna es binaria no sabes si son (0, 1) o (True y False), así que generalizo el segundo if 
-def get_features_cat_regression(df:pd.DataFrame, target_col:str, pvalue=0.05, umbral_categoria=10, umbral_card=10) -> list:
+def get_features_cat_regression(df:pd.DataFrame, target_col:str, pvalue=0.05, umbral_categoria=10, umbral_card=10.0) -> list:
     """
     La función devuelve una lista con las columnas categóricas del dataframe cuyo test de relación 
     con la columna designada por 'target_col' supera el umbral de confianza estadística definido por 'pvalue'.
@@ -399,9 +400,9 @@ def get_features_cat_regression(df:pd.DataFrame, target_col:str, pvalue=0.05, um
         Umbral para considerar una variable como categórica en función de su cardinalidad.
         Su valor por defecto es 10.
 
-    umbral_card : int (opcional)
+    umbral_card : float (opcional)
         Porcentaje mínimo de valores únicos en relación al tamaño del dataframe por encima del cual 
-        una variable numérica se considera de alta cardinalidad. Su valor por defecto es 10.
+        la variable numérica objetivo (target) se considera de alta cardinalidad. Su valor por defecto es 10.0.
 
     Retorna:
     lista_categoricas : list
@@ -459,10 +460,93 @@ def get_features_cat_regression(df:pd.DataFrame, target_col:str, pvalue=0.05, um
     
     return lista_categoricas
 
+# Correciones respecto la función de JUANMA
+    # Añadir argumentos por defecto de la función
+    # Contemplar el error de que no haya columnas categóricas
+    # Añadir opción with_individual_plot
+    # Plotear solo 4 gráficas por fila porque sino no se aprecia nada
+def plot_features_cat_regression(df:pd.DataFrame, target_col= "", columns=[], pvalue=0.05, with_individual_plot=False, umbral_categoria=10, umbral_card=10.0) -> list:
+    """
+    La función recibe un DataFrame y realiza un análisis de las columnas categóricas en relación con una columna objetivo numérica.
+    Pinta histogramas agrupados de la variable objetivo por cada columna categórica seleccionada si su test de relación es estadísticamente significativo.
+    
+    Parámetros
+    ----------
+    df : pd.DataFrame
+        DataFrame que contiene los datos a analizar.
+    
+    target_col : str, opcional
+        Nombre de la columna objetivo numérica (por defecto es "").
+    
+    columns : list, opcional
+        Lista de nombres de las columnas categóricas a analizar (por defecto es lista vacía).
+    
+    pvalue : float, opcional
+        Nivel de significancia estadística para los tests de relación (por defecto es 0.05).
+    
+    with_individual_plot : bool, opcional
+        Si es True, genera un histograma separado para cada variable categórica. Si es False, los agrupa (por defecto es False).
+    
+    umbral_categoria : int, opcional
+        Umbral de cardinalidad para considerar una columna como categórica (por defecto es 10).
+    
+    umbral_card : float, opcional
+        Porcentaje mínimo de valores únicos en relación al tamaño del dataframe por encima del cual 
+        la variable numérica objetivo (target) se considera de alta cardinalidad. Su valor por defecto es 10.0.    
+    
+    Retorna:
+    -------
+    list
+        Lista de nombres de columnas categóricas que cumplen con los criterios de significancia estadística.
+        Si no se cumplen las condiciones, retorna None o una lista vacía.
+    """
+    # Obtener las columnas categóricas con relación significativa usando get_features_cat_regression
+    lista = get_features_cat_regression(df, target_col, pvalue, umbral_categoria, umbral_card)
 
-def plot_features_cat_regression():
-    '''puede usar internamente get_features_cat_regression'''
-    pass
+    if lista is None:
+        return None
+    elif not lista:
+        print('Error: Ninguna columna cumple con los criterios de correlación y significancia.')
+        return None
+
+    # Si 'columns' está vacía, tomar todas las variables categóricas que pasaron el test
+    if not columns:
+        columns = lista
+    else:
+        # Filtrar las que cumplen con la significancia estadística
+        columns = [col for col in columns if col in lista]
+
+    if not columns:
+        print("Error: Ninguna columna de 'columns' cumple con el criterio de significancia.")
+        return None
+
+    # Plotear
+    if with_individual_plot:
+        # Plotear gráficos individuales
+        for col in columns:
+            sns.histplot(df, x=target_col, hue=col, kde=True)
+            plt.title(f"Histograma de {target_col} con {col}")
+            plt.show()
+    else:
+        # Plotear con subplots, 4 gráficos por fila
+        columnas_por_fila = 4
+        filas_ploteo = math.ceil(len(columns) / columnas_por_fila)
+        fig, axes = plt.subplots(filas_ploteo, columnas_por_fila, figsize=(20, 5 * filas_ploteo), constrained_layout=True)
+
+        # Aplanar ejes para facilitar la iteración
+        axes = axes.flatten() if filas_ploteo > 1 else [axes]
+
+        for i, col in enumerate(columns):
+            sns.histplot(df, x=target_col, hue=col, ax=axes[i], kde=True)
+            axes[i].set_title(f"Histograma de {target_col} con {col}")
+
+        # Ocultar ejes vacíos si hay menos gráficos que espacios de subplots
+        for j in range(i + 1, len(axes)):
+            axes[j].axis('off')
+
+        plt.show()
+
+    return columns
 
 
 ##########################################################################################

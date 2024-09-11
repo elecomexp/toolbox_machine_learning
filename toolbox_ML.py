@@ -264,8 +264,7 @@ def get_features_num_regression(df:pd.DataFrame, target_col:str, umbral_corr:flo
             correlacion = resultado_test[0]
             p_valor = resultado_test[1]
             
-            if correlacion == np.nan:
-                print()
+            
             if abs(correlacion) > umbral_corr:
                 # Confianza del 1-p_valor
                 if pvalue is None or p_valor < pvalue:  

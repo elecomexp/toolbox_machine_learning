@@ -9,9 +9,7 @@ import seaborn as sns
 from scipy.stats import chi2_contingency, f_oneway, mannwhitneyu, pearsonr
 from sklearn.feature_selection import f_regression
 
-# Correcciones respecto de la función de JUANMA
-    # No tenía control de errores
-    # NO calculaba bien los missings y los unique values por la forma en que se llama a la función
+
 def describe_df(df:pd.DataFrame) -> pd.DataFrame:
     """
     Generates a summary DataFrame that provides detailed information about 
@@ -87,10 +85,6 @@ def describe_df(df:pd.DataFrame) -> pd.DataFrame:
     return df_out.round(2).T
 
 
-# Correcciones respecto de la función de JUANMA
-    # No tenía control de errores
-    # No hacía falta el bucle for porque pandas ya aplica el cálculo a todas las columnas
-    # SE podría COMPROBAR SI EL DATA FRAME TIENE COLUMNAS O ESTÁ VACÍO
 def typify_variables(df:pd.DataFrame, umbral_categoria=10, umbral_continua=30.0) -> pd.DataFrame:
     """
     Suggests the type of each column in the input DataFrame based on cardinality and thresholds.
@@ -173,13 +167,6 @@ def typify_variables(df:pd.DataFrame, umbral_categoria=10, umbral_continua=30.0)
     return df_out
 
 
-# Correcciones respecto de la función de LUIS
-    # Añade un argumento a la función (umbral_card)
-    # Faltaba comprobar cardinalidad
-    # No retornaba None tras las "excepciones"
-    # No hacía falta eliminar lista_num.remove(target_col) si se filtra en el primer if
-    # Para que supere el test de pearson con una significancia de 1-p_value, p_value debe ser menor que el argumento que introduzcamos
-    # Añadido el argumento pearson_results para mostrar el resultado del análisis
 def get_features_num_regression(df:pd.DataFrame, target_col:str, umbral_corr:float, pvalue:float=None, umbral_card=10.0, umbral_categoria=10, pearson_results=False) -> list:
     """
     Obtiene las columnas numéricas de un DataFrame cuya correlación con la columna objetivo 
@@ -207,14 +194,14 @@ def get_features_num_regression(df:pd.DataFrame, target_col:str, umbral_corr:flo
         significancia estadística mayor o igual a 1-p_value.
         Debe estar comprendido entre 0 y 1.
 
-    umbral_categoria : int (opcional)
-        Umbral para considerar una variable como categórica en función de su cardinalidad.
-        Su valor por defecto es 10.
-        
     umbral_card : float (opcional)
         Umbral para definir una alta cardinalidad en una variable numérica.
         Si la cardinalidad porcentual del target_col es superior o igual a este umbral, entonces se 
         considera que la columna tiene una alta cardinalidad. En otro caso, tiene una baja cardinalidad.
+        
+    umbral_categoria : int (opcional)
+        Umbral para considerar una variable como categórica en función de su cardinalidad.
+        Su valor por defecto es 10.
         
     pearson_results : bool (opcional)
         Si es `True`, imprime los resultados del test de Pearson para cada columna que
@@ -255,7 +242,8 @@ def get_features_num_regression(df:pd.DataFrame, target_col:str, umbral_corr:flo
         print(f"Error: {umbral_card} no es un valor válido para 'umbral_card'. Debe ser un float.")
         return None
 
-    cardinality_percentage = (df[target_col].nunique() / len(df)) * 100 # Cardinalidad de la columna "target"
+    # Cardinalidad de la columna "target"
+    cardinality_percentage = (df[target_col].nunique() / len(df)) * 100 
     if cardinality_percentage < umbral_card:
         print(f"Error: {target_col} tiene una cardinalidad inferior a {umbral_card}.")
         return None
@@ -268,8 +256,8 @@ def get_features_num_regression(df:pd.DataFrame, target_col:str, umbral_corr:flo
         print(f"Error: {pvalue} no es un valor válido para 'pvalue'. Debe estar entre 0 y 1.")
         return None
 
+    # Creación de la lista de columnas numéricas que cumplen con los criterios establecidos
     lista_num = []
-    
     for columna in df.columns:
         if pd.api.types.is_numeric_dtype(df[columna]) and columna != target_col and df.nunique()[columna] > umbral_categoria:
             resultado_test = pearsonr(df[columna], df[target_col])
@@ -289,11 +277,6 @@ def get_features_num_regression(df:pd.DataFrame, target_col:str, umbral_corr:flo
     return lista_num
 
 
-# Correcciones respecto de la función de LUIS
-    # Añado valores por defecto en los argumentos (según indicaciones del enunciado)
-    # Gestión de errores heredados desde get_features_num_regression
-    # En vez de tener 4 veces el código de pintar, redefino las variables según el caso de uso y después voy al bucle de dibujar
-    # La función devuelve las columnas numéricas (según indicaciones del enunciado)
 def plot_features_num_regression(df:pd.DataFrame, target_col='', columns=[], umbral_corr=0.0, pvalue=None, umbral_card=10.0) -> list:
     """
     Visualiza las relaciones entre una columna objetivo y las columnas numéricas del DataFrame que cumplen con los criterios 
@@ -358,14 +341,17 @@ def plot_features_num_regression(df:pd.DataFrame, target_col='', columns=[], umb
         return None
     
     # Si no se han especificado columnas, usar las obtenidas de get_features_num_regression
-
     if not columns:
         numeric_columns = lista
     else:
         # Filtrar las que cumplen con la significancia estadística
         numeric_columns = [col for col in columns if col in lista]
-
-        
+    
+    # Si ninguna columa cumple con los criterios de correlación y confianza, retorna None
+    if not numeric_columns:
+        print("Error: Ninguna columna de 'columns' cumple con el criterio de significancia.")
+        return None
+      
     # Dividir en grupos de 5 para los pairplots (1 columna objetivo + 4 columnas adicionales)
     for i in range(0, len(numeric_columns), 4):
         subset_cols = numeric_columns[i:i + 4]
@@ -378,10 +364,6 @@ def plot_features_num_regression(df:pd.DataFrame, target_col='', columns=[], umb
     return numeric_columns
 
 
-# Correcciones respecto de la función de CARLOS:
-    # Añade argumentos de entrada a la función
-    # Faltaba comprobar la cardinalidad
-    # Cuando la columna es binaria no sabes si son (0, 1) o (True y False), así que generalizo el segundo if 
 def get_features_cat_regression(df:pd.DataFrame, target_col:str, pvalue=0.05, umbral_categoria=10, umbral_card=10.0) -> list:
     """
     La función devuelve una lista con las columnas categóricas del dataframe cuyo test de relación 
@@ -437,10 +419,10 @@ def get_features_cat_regression(df:pd.DataFrame, target_col:str, pvalue=0.05, um
         return None
 
     # Comprobar si el target tiene alta cardinalidad
-    #cardinalidad_percent = (df[target_col].nunique() / df.shape[0]) * 100
-    #if cardinalidad_percent < umbral_card:
-        #print(f"Error: La columna objetivo no cumple con el umbral de alta cardinalidad ({umbral_card}%).")
-        #return None
+    cardinalidad_percent = (df[target_col].nunique() / df.shape[0]) * 100
+    if cardinalidad_percent < umbral_card:
+        print(f"Error: La columna objetivo no cumple con el umbral de alta cardinalidad ({umbral_card}%).")
+        return None
 
     # Lista de columnas categóricas que cumplen los criterios
     lista_categoricas = []
@@ -469,11 +451,7 @@ def get_features_cat_regression(df:pd.DataFrame, target_col:str, pvalue=0.05, um
     
     return lista_categoricas
 
-# Correciones respecto la función de JUANMA
-    # Añadir argumentos por defecto de la función
-    # Contemplar el error de que no haya columnas categóricas
-    # Añadir opción with_individual_plot
-    # Plotear solo 4 gráficas por fila porque sino no se aprecia nada
+
 def plot_features_cat_regression(df:pd.DataFrame, target_col= "", columns=[], pvalue=0.05, with_individual_plot=False, umbral_categoria=10, umbral_card=10.0) -> list:
     """
     La función recibe un DataFrame y realiza un análisis de las columnas categóricas en relación con una columna objetivo numérica.
@@ -524,7 +502,8 @@ def plot_features_cat_regression(df:pd.DataFrame, target_col= "", columns=[], pv
     else:
         # Filtrar las que cumplen con la significancia estadística
         columns = [col for col in columns if col in lista]
-
+    
+    # Si ninguna columa cumple con los criterios de significancia, retorna None
     if not columns:
         print("Error: Ninguna columna de 'columns' cumple con el criterio de significancia.")
         return None
@@ -592,7 +571,6 @@ def _is_dataframe(df) -> bool:
         return False
     else:
         return True
-    
 
 
 ##########################################################################################
